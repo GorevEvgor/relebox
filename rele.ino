@@ -2,37 +2,105 @@
 #include <Time.h>
 #include <OneWire.h>
 
-OneWire  ds(6);  // on pin 10 (a 4.7K resistor is necessary)
+#define VENT_pin 4
+#define HEAT_pin 5
+#define SENS_pin 6
+#define CD_pin 10 //Bluetooth CD pin
 
+#define revent 6
+#define goal 2.0
+#define delta 3.0
 
-AltSoftSerial altSerial;
+typedef struct VH_t
+  {
+    char *name;
+    byte vent;
+    byte heat;
+    int wait;
+  };
 
-byte addr0[8] = { 0x28, 0xBA, 0x58, 0xA9, 0x6, 0x0, 0x0, 0x96 }; //DOWN
-byte addr1[8] = { 0x28, 0x5C, 0x3B, 0xAB, 0x6, 0x0, 0x0, 0x55 }; //UP
-byte *sensor[2] = { addr0, addr1 };
-float temp[2];
+typedef struct sens_t
+  {
+    byte addr[8];
+    float temp;
+  };
+
+OneWire  ds(SENS_pin);  // 4.7K resistor is necessary
+AltSoftSerial altSerial; // pin 8 9
+
+VH_t VH_param[4] =
+{
+  {  //0 start vent
+    "vent1",   // name
+    HIGH,      // vent
+    LOW,      // heat
+    60 * 2,  // wait
+  },
+  {  //1 wait
+    "wait", LOW, LOW, 60 * 10,
+  },
+  {  //2 heat
+    "heat", HIGH, HIGH, 60 * 4,
+  },
+  {  //3 post vent
+    "vent2", HIGH, LOW, 60 * 8,
+  },
+};
+
+sens_t sensor[2] = 
+{
+  {  // DOWN
+    { 0x28, 0xBA, 0x58, 0xA9, 0x6, 0x0, 0x0, 0x96 }, // addr 
+    0.0  //temp
+  },
+  {  //UP
+    { 0x28, 0x5C, 0x3B, 0xAB, 0x6, 0x0, 0x0, 0x55 },
+    0.0
+  }
+};
+
 byte data[12];
 time_t start;
-int vent_start = 60 * 2;
-int heat_time  = 60 * 4;
-int vent_stop  = 60 * 8;
-int again =      60 * 10;
 byte state;
+float startTemp;
 byte wait_count;
-byte revent = 6;
-float goal = 2.0;
-int state_time[4] = {vent_start, again, heat_time, vent_stop};
+byte error = 0;
+byte debug = 0;
+int heat_cycle=0;
 
 void setup(void) {
-  Serial.begin(9600);
-  pinMode(4, OUTPUT);
-  digitalWrite(4, LOW);
-  pinMode(5, OUTPUT);
-  digitalWrite(5, LOW);
+
+  int monitor_time = 60;
+
   set_time();
-  state = 0;
-  start = now();
+
+  Serial.begin(9600);
   altSerial.begin(9600);
+
+  pinMode(VENT_pin, OUTPUT);
+  pinMode(HEAT_pin, OUTPUT);
+  pinMode(CD_pin, INPUT);
+
+  get_temp();
+  setState(0);
+  
+  while (now() < start + monitor_time and !Serial.available() ) 
+    delay(500);
+  
+  while ( Serial.available() ) {
+    char c = Serial.read();
+    debug = 1;
+  }
+
+}
+
+void setState(byte newState) {
+  digitalWrite(VENT_pin,VH_param[newState].vent);
+  digitalWrite(HEAT_pin,VH_param[newState].heat);
+  state = newState;
+  start = now();
+  startTemp = sensor[0].temp;
+  if (state==2) heat_cycle++;
 }
 
 
@@ -40,68 +108,70 @@ void loop(void) {
   switch (state) {
     case 0: //vent start
       wait_count = 0;
-      if (now() < start + vent_start) {
-        digitalWrite(4, HIGH);
-        digitalWrite(5, LOW);
-      } else {
+      if (now() > start + VH_param[state].wait) {
         get_temp();
-        state = (temp[0] > goal)? 1: 2;
-        start = now();
+        setState((sensor[0].temp > goal or (error & 0x3 == 0x3) )? 1: 2);
       }
       break;
      case 1: //wait
-      if (now() < start + again) {
-        digitalWrite(4, LOW);
-        digitalWrite(5, LOW);
-      } else {
+      if (now() > start + VH_param[state].wait) {
         get_temp();
-        state = (temp[0] > goal+3 and wait_count++ < revent )?1: 0;
-        start = now();
+        setState((( sensor[0].temp < goal + delta ) or ( wait_count++ > revent ))? 0:1 ); 
       }
       break;
      case 2: //heat
-      if (now() < start + heat_time) {
-        digitalWrite(4, HIGH);
-        digitalWrite(5, HIGH);
-      } else {
-        state = 3;
-        start = now();
-      }
+      if (now() > start + VH_param[state].wait) setState(3);
       break;
      case 3: //after heat
-      if (now() < start + vent_stop) {
-        digitalWrite(4, HIGH);
-        digitalWrite(5, LOW);
-      } else {
-        state = 1;
-        start = now();
-      }
+      if (now() > start + VH_param[state].wait) setState(1);
       break;
   }
-  get_temp();
-
-  Serial.print("DOWN = ");  Serial.print(temp[0]);
-  altSerial.print("D="); altSerial.print(temp[0]);
-  Serial.print(" UP = ");  Serial.print(temp[1]);
-  altSerial.print(" U="); altSerial.print(temp[1]);
-
-  Serial.println();
-
-  Serial.print("State = "); Serial.print(state);
-  altSerial.print(" St="); altSerial.print(state);
-  if (state == 1) {
-    Serial.print(" count = "); Serial.print(wait_count);
-    altSerial.print(" W="); altSerial.print(wait_count);
-  }
-  Serial.print(" Time = ");  Serial.print(now() - start);
-  altSerial.print(" T="); altSerial.print(now() - start);
-
-  Serial.print(" is ");  Serial.print(state_time[state]);
-  altSerial.print(" is "); altSerial.print(state_time[state]);
-
-  Serial.println();
-  altSerial.println();
+  
+  print_data();
     
+  delay(10000);
+}
+
+void print_data() {
+  byte i;
+  byte cd = 1;
+  for ( i = 0; i < 4; i++) {
+    cd &= digitalRead(CD_pin);
+    delay(100);
+  }
+      
+  if (!cd and !debug) return;
+  
+  get_temp();
+  if (debug) {
+    Serial.print(minute());
+    Serial.print(":");
+    Serial.print(second());
+    Serial.print(" DN=");  Serial.print(sensor[0].temp);
+    Serial.print(" UP=");  Serial.print(sensor[1].temp);
+    Serial.print(" State="); Serial.print(state);
+    Serial.print(" count="); Serial.print(wait_count);
+    Serial.print(" Time=");  Serial.print(now() - start);
+    Serial.print(" is ");  Serial.print(VH_param[state].wait);
+    Serial.print(" Error=");  Serial.print(error);
+    Serial.print(" CD=");  Serial.print(cd);
+    Serial.println();
+  }
+  if (cd) {
+    altSerial.print(minute());
+    altSerial.print(":");
+    altSerial.print(second());
+    altSerial.print(" ");
+    altSerial.print("D="); altSerial.print(sensor[0].temp);
+    altSerial.print(" U="); altSerial.print(sensor[0].temp);
+    altSerial.print(" St="); altSerial.print(state);
+    altSerial.print(" W="); altSerial.print(wait_count);
+    altSerial.print(" T="); altSerial.print(now() - start);
+    altSerial.print(" is "); altSerial.print(VH_param[state].wait);
+    altSerial.print(" E="); altSerial.print(error);
+    altSerial.print(" H="); altSerial.print(heat_cycle);
+    altSerial.println();
+  }
 /*
   Serial.print(hour());
   Serial.print(" ");
@@ -118,7 +188,7 @@ void loop(void) {
   Serial.print(now());
   Serial.println();
 */
-  delay(10000);
+
 }
 
 void set_time() {
@@ -129,22 +199,25 @@ void set_time() {
 void get_temp(void) {
   byte i,sen;
   byte present = 0;
-
+  byte pe;
+  
   for (sen = 0; sen < 2; sen++) {
     
     ds.reset();
-    ds.select(sensor[sen]);
+    ds.select(sensor[sen].addr);
     ds.write(0x44, 1);        // start conversion, with parasite power on at the end
   
     delay(1000);     // maybe 750ms is enough, maybe not
     // we might do a ds.depower() here, but the reset will take care of it.
   
     present = ds.reset();
-    ds.select(sensor[sen]);
+    ds.select(sensor[sen].addr);
     ds.write(0xBE);         // Read Scratchpad
 
+    pe = 0;
     for ( i = 0; i < 9; i++) {           // we need 9 bytes
       data[i] = ds.read();
+      pe |= data[i];
     }
     int16_t raw = (data[1] << 8) | data[0];
     byte cfg = (data[4] & 0x60);
@@ -153,7 +226,13 @@ void get_temp(void) {
     else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
     else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
     //// default is 12 bit resolution, 750 ms conversion time
-    temp[sen] = (float)raw / 16.0;
+    sensor[sen].temp = (float)raw / 16.0;
+    if (!pe)  {
+      error |= 1 << sen;  //data not read
+    } else {
+      error &= !(1 << sen);  //clear error
+    };
   }
+  if ( (error & 0x3) == 0x1 ) sensor[0].temp=sensor[1].temp; // if sensor[0] not work use sensor[1]
 }
 
