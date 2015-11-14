@@ -6,6 +6,7 @@
 #define HEAT_pin 5
 #define SENS_pin 6
 #define CD_pin 10 //Bluetooth CD pin
+#define LED_pin 13
 
 #define revent 6
 #define goal 2.0
@@ -13,10 +14,11 @@
 
 typedef struct VH_t
   {
-    char *name;
+//    char *name;
     byte vent;
     byte heat;
     int wait;
+    int count;
   };
 
 typedef struct sens_t
@@ -31,19 +33,23 @@ AltSoftSerial altSerial; // pin 8 9
 VH_t VH_param[4] =
 {
   {  //0 start vent
-    "vent1",   // name
+//    "vent1",   // name
     HIGH,      // vent
     LOW,      // heat
     60 * 2,  // wait
+    0        //count
   },
   {  //1 wait
-    "wait", LOW, LOW, 60 * 10,
+//    "wait", 
+    LOW, LOW, 60 * 10, 0
   },
   {  //2 heat
-    "heat", HIGH, HIGH, 60 * 4,
+//    "heat", 
+    HIGH, HIGH, 60 * 4, 0
   },
   {  //3 post vent
-    "vent2", HIGH, LOW, 60 * 8,
+//    "vent2", 
+    HIGH, LOW, 60 * 8, 0
   },
 };
 
@@ -66,7 +72,6 @@ float startTemp;
 byte wait_count;
 byte error = 0;
 byte debug = 0;
-int heat_cycle=0;
 
 void setup(void) {
 
@@ -79,6 +84,7 @@ void setup(void) {
 
   pinMode(VENT_pin, OUTPUT);
   pinMode(HEAT_pin, OUTPUT);
+  pinMode(LED_pin, OUTPUT);
   pinMode(CD_pin, INPUT);
 
   get_temp();
@@ -100,11 +106,12 @@ void setState(byte newState) {
   state = newState;
   start = now();
   startTemp = sensor[0].temp;
-  if (state==2) heat_cycle++;
+  VH_param[newState].count++;
 }
 
 
 void loop(void) {
+  digitalWrite(LED_pin,(error)? HIGH: LOW);
   switch (state) {
     case 0: //vent start
       wait_count = 0;
@@ -169,7 +176,7 @@ void print_data() {
     altSerial.print(" T="); altSerial.print(now() - start);
     altSerial.print(" is "); altSerial.print(VH_param[state].wait);
     altSerial.print(" E="); altSerial.print(error);
-    altSerial.print(" H="); altSerial.print(heat_cycle);
+    altSerial.print(" H="); altSerial.print(VH_param[2].count);
     altSerial.println();
   }
 /*
