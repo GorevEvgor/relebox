@@ -1,0 +1,267 @@
+EESchema Schematic File Version 2
+LIBS:power
+LIBS:device
+LIBS:transistors
+LIBS:conn
+LIBS:linear
+LIBS:regul
+LIBS:74xx
+LIBS:cmos4000
+LIBS:adc-dac
+LIBS:memory
+LIBS:xilinx
+LIBS:special
+LIBS:microcontrollers
+LIBS:dsp
+LIBS:microchip
+LIBS:analog_switches
+LIBS:motorola
+LIBS:texas
+LIBS:intel
+LIBS:audio
+LIBS:interface
+LIBS:digital-audio
+LIBS:philips
+LIBS:display
+LIBS:cypress
+LIBS:siliconi
+LIBS:opto
+LIBS:atmel
+LIBS:contrib
+LIBS:valves
+LIBS:noname-cache
+EELAYER 27 0
+EELAYER END
+$Descr A4 11693 8268
+encoding utf-8
+Sheet 1 1
+Title ""
+Date "9 nov 2015"
+Rev ""
+Comp ""
+Comment1 ""
+Comment2 ""
+Comment3 ""
+Comment4 ""
+$EndDescr
+$Comp
+L BC548 Q1
+U 1 1 562E7372
+P 4150 1700
+F 0 "Q1" H 4150 1551 40  0000 R CNN
+F 1 "BC548" H 4150 1850 40  0000 R CNN
+F 2 "TO92" H 4050 1802 29  0000 C CNN
+F 3 "" H 4150 1700 60  0000 C CNN
+	1    4150 1700
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R2
+U 1 1 562E742F
+P 3750 1950
+F 0 "R2" V 3830 1950 40  0000 C CNN
+F 1 "R" V 3757 1951 40  0000 C CNN
+F 2 "~" V 3680 1950 30  0000 C CNN
+F 3 "~" H 3750 1950 30  0000 C CNN
+	1    3750 1950
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3450 1700 3950 1700
+$Comp
+L R R1
+U 1 1 562E752B
+P 3450 1450
+F 0 "R1" V 3530 1450 40  0000 C CNN
+F 1 "R" V 3457 1451 40  0000 C CNN
+F 2 "~" V 3380 1450 30  0000 C CNN
+F 3 "~" H 3450 1450 30  0000 C CNN
+	1    3450 1450
+	1    0    0    -1  
+$EndComp
+Connection ~ 3750 1700
+Wire Wire Line
+	4250 1500 4450 1500
+Text GLabel 3900 600  0    60   Input ~ 0
++5
+Text GLabel 4200 2600 0    60   Input ~ 0
+-5
+Wire Wire Line
+	3750 2200 4200 2200
+Wire Wire Line
+	4200 2200 4200 2600
+Wire Wire Line
+	4250 1900 4250 2600
+Wire Wire Line
+	4250 2600 4200 2600
+Text GLabel 3850 1250 0    60   Input ~ 0
+L
+$Comp
+L TRD-5VDC-SC-CL U1
+U 1 1 5640D91C
+P 4850 1350
+F 0 "U1" H 5000 1105 50  0000 C CNN
+F 1 "TRD-5VDC-SC-CL" H 5050 1600 50  0000 C CNN
+F 2 "" H 5150 1500 60  0000 C CNN
+F 3 "" H 5150 1500 60  0000 C CNN
+	1    4850 1350
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3850 1250 4300 1250
+Wire Wire Line
+	4300 1250 4300 1350
+Wire Wire Line
+	4300 1350 4450 1350
+$Comp
+L R R3
+U 1 1 5640DA12
+P 4450 850
+F 0 "R3" V 4530 850 40  0000 C CNN
+F 1 "R" V 4457 851 40  0000 C CNN
+F 2 "~" V 4380 850 30  0000 C CNN
+F 3 "~" H 4450 850 30  0000 C CNN
+	1    4450 850 
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3900 600  4450 600 
+Wire Wire Line
+	4450 1100 4450 1200
+$Comp
+L CONNECTOR P1
+U 1 1 5640DA9D
+P 3050 1200
+F 0 "P1" H 3400 1300 70  0000 C CNN
+F 1 "CONNECTOR" H 3400 1100 70  0000 C CNN
+F 2 "~" H 3050 1200 60  0000 C CNN
+F 3 "~" H 3050 1200 60  0000 C CNN
+	1    3050 1200
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	3050 1200 3450 1200
+$Comp
+L CONNECTOR P2
+U 1 1 5640DAEA
+P 5550 1200
+F 0 "P2" H 5900 1300 70  0000 C CNN
+F 1 "CONNECTOR" H 5900 1100 70  0000 C CNN
+F 2 "~" H 5550 1200 60  0000 C CNN
+F 3 "~" H 5550 1200 60  0000 C CNN
+	1    5550 1200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5250 1200 5550 1200
+$Comp
+L BC548 Q2
+U 1 1 5640DB05
+P 4050 4050
+F 0 "Q2" H 4050 3901 40  0000 R CNN
+F 1 "BC548" H 4050 4200 40  0000 R CNN
+F 2 "TO92" H 3950 4152 29  0000 C CNN
+F 3 "" H 4050 4050 60  0000 C CNN
+	1    4050 4050
+	1    0    0    -1  
+$EndComp
+$Comp
+L R R6
+U 1 1 5640DB0B
+P 3650 4300
+F 0 "R6" V 3730 4300 40  0000 C CNN
+F 1 "R" V 3657 4301 40  0000 C CNN
+F 2 "~" V 3580 4300 30  0000 C CNN
+F 3 "~" H 3650 4300 30  0000 C CNN
+	1    3650 4300
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3350 4050 3850 4050
+$Comp
+L R R5
+U 1 1 5640DB12
+P 3350 3800
+F 0 "R5" V 3430 3800 40  0000 C CNN
+F 1 "R" V 3357 3801 40  0000 C CNN
+F 2 "~" V 3280 3800 30  0000 C CNN
+F 3 "~" H 3350 3800 30  0000 C CNN
+	1    3350 3800
+	1    0    0    -1  
+$EndComp
+Connection ~ 3650 4050
+Wire Wire Line
+	4150 3850 4350 3850
+Text GLabel 3800 2950 0    60   Input ~ 0
++5
+Text GLabel 4100 4950 0    60   Input ~ 0
+-5
+Wire Wire Line
+	3650 4550 4100 4550
+Wire Wire Line
+	4100 4550 4100 4950
+Wire Wire Line
+	4150 4250 4150 4950
+Wire Wire Line
+	4150 4950 4100 4950
+Text GLabel 3750 3600 0    60   Input ~ 0
+L
+$Comp
+L TRD-5VDC-SC-CL U2
+U 1 1 5640DB21
+P 4750 3700
+F 0 "U2" H 4900 3455 50  0000 C CNN
+F 1 "TRD-5VDC-SC-CL" H 4950 3950 50  0000 C CNN
+F 2 "" H 5050 3850 60  0000 C CNN
+F 3 "" H 5050 3850 60  0000 C CNN
+	1    4750 3700
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3750 3600 4200 3600
+Wire Wire Line
+	4200 3600 4200 3700
+Wire Wire Line
+	4200 3700 4350 3700
+$Comp
+L R R4
+U 1 1 5640DB2A
+P 4350 3200
+F 0 "R4" V 4430 3200 40  0000 C CNN
+F 1 "R" V 4357 3201 40  0000 C CNN
+F 2 "~" V 4280 3200 30  0000 C CNN
+F 3 "~" H 4350 3200 30  0000 C CNN
+	1    4350 3200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	3800 2950 4350 2950
+Wire Wire Line
+	4350 3450 4350 3550
+$Comp
+L CONNECTOR P3
+U 1 1 5640DB32
+P 2950 3550
+F 0 "P3" H 3300 3650 70  0000 C CNN
+F 1 "CONNECTOR" H 3300 3450 70  0000 C CNN
+F 2 "~" H 2950 3550 60  0000 C CNN
+F 3 "~" H 2950 3550 60  0000 C CNN
+	1    2950 3550
+	-1   0    0    -1  
+$EndComp
+Wire Wire Line
+	2950 3550 3350 3550
+$Comp
+L CONNECTOR P4
+U 1 1 5640DB39
+P 5450 3550
+F 0 "P4" H 5800 3650 70  0000 C CNN
+F 1 "CONNECTOR" H 5800 3450 70  0000 C CNN
+F 2 "~" H 5450 3550 60  0000 C CNN
+F 3 "~" H 5450 3550 60  0000 C CNN
+	1    5450 3550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5150 3550 5450 3550
+$EndSCHEMATC

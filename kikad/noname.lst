@@ -1,0 +1,42 @@
+eeschema (2013-jul-07)-stable  >> Creation date: Пн. 09 нояб. 2015 22:33:57
+#Cmp ( order = Reference )
+| P1         CONNECTOR   ; ~           
+| P2         CONNECTOR   ; ~           
+| P3         CONNECTOR   ; ~           
+| P4         CONNECTOR   ; ~           
+| P5         CONNECTOR   ; ~           
+| P6         CONNECTOR   ; ~           
+| P7         CONNECTOR   ; ~           
+| Q1         BC548       ; TO92        
+| Q2         BC548       ; TO92        
+| R1         R           ; ~           
+| R2         R           ; ~           
+| R3         R           ; ~           
+| R4         R           ; ~           
+| R5         R           ; ~           
+| R6         R           ; ~           
+| U1         TRD-5VDC-SC-CL;             
+| U2         TRD-5VDC-SC-CL;             
+#End Cmp
+
+#Cmp ( order = Value )
+| CONNECTOR    P1        ; ~           
+| CONNECTOR    P2        ; ~           
+| CONNECTOR    P3        ; ~           
+| CONNECTOR    P4        ; ~           
+| CONNECTOR    P5        ; ~           
+| CONNECTOR    P6        ; ~           
+| CONNECTOR    P7        ; ~           
+| BC548        Q1        ; TO92        
+| BC548        Q2        ; TO92        
+| R            R1        ; ~           
+| R            R2        ; ~           
+| R            R3        ; ~           
+| R            R4        ; ~           
+| R            R5        ; ~           
+| R            R6        ; ~           
+| TRD-5VDC-SC-CL U1        ;             
+| TRD-5VDC-SC-CL U2        ;             
+#End Cmp
+
+#End List
