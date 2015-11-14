@@ -151,9 +151,9 @@ void print_data() {
   
   get_temp();
   if (debug) {
-    Serial.print(minute());
+/*    Serial.print(minute());
     Serial.print(":");
-    Serial.print(second());
+    Serial.print(second());*/
     Serial.print(" DN=");  Serial.print(sensor[0].temp);
     Serial.print(" UP=");  Serial.print(sensor[1].temp);
     Serial.print(" State="); Serial.print(state);
@@ -165,16 +165,16 @@ void print_data() {
     Serial.println();
   }
   if (cd) {
-    altSerial.print(minute());
+/*    altSerial.print(minute());
     altSerial.print(":");
     altSerial.print(second());
-    altSerial.print(" ");
+    altSerial.print(" ");*/
     altSerial.print("D="); altSerial.print(sensor[0].temp);
-    altSerial.print(" U="); altSerial.print(sensor[0].temp);
+    altSerial.print(" U="); altSerial.print(sensor[1].temp);
     altSerial.print(" St="); altSerial.print(state);
     altSerial.print(" W="); altSerial.print(wait_count);
     altSerial.print(" T="); altSerial.print(now() - start);
-    altSerial.print(" is "); altSerial.print(VH_param[state].wait);
+    altSerial.print("/"); altSerial.print(VH_param[state].wait);
     altSerial.print(" E="); altSerial.print(error);
     altSerial.print(" H="); altSerial.print(VH_param[2].count);
     altSerial.println();
