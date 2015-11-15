@@ -74,12 +74,10 @@ float startTemp;
 byte wait_count;
 byte error = 0;
 byte debug = 0;
-
+byte debug_show = 1;
 void setup(void) {
 
   int monitor_time = 60;
-
-  set_time();
 
   Serial.begin(9600);
   altSerial.begin(9600);
@@ -89,7 +87,7 @@ void setup(void) {
   pinMode(LED_pin, OUTPUT);
   pinMode(CD_pin, INPUT);
 
-  get_temp();
+  getTemp();
   setState(0);
   
   while (now() < start + monitor_time and !Serial.available() ) 
@@ -118,13 +116,13 @@ void loop(void) {
     case 0: //vent start
       wait_count = 0;
       if (now() > start + VH_param[state].wait) {
-        get_temp();
+        getTemp();
         setState((sensor[0].temp > goal or (error & 0x3 == 0x3) )? 1: 2);
       }
       break;
      case 1: //wait
       if (now() > start + VH_param[state].wait) {
-        get_temp();
+        getTemp();
         setState((( sensor[0].temp < goal + delta ) or 
                   ( wait_count++ > revent ) or 
                   ( now() < VH_param[2].last + 3600 ))? 0:1 ); 
@@ -164,6 +162,11 @@ void dialog() {
     else 
       if (c[1]=='s') set_State(); 
   };
+  if (c[0]=='d') {
+    if (c[1]=='s') debug_show = 1;
+    else 
+      if (c[1]=='n') debug_show = 0; 
+  };
 };
 
 void set_State() {
@@ -171,12 +174,15 @@ void set_State() {
   if (! altSerial.available() ) return;
   l = altSerial.read();
   if ( isDigit(l) ) l -= 0x30; else return;
-  if ( l>0 and l<4 ) setState(l);
+  if ( l>=0 and l<4 ) {
+    getTemp();
+    setState(l);
+  };
   get_State();
 }
 
 void get_State() {
-    get_temp();
+    getTemp();
     get_Time();
     altSerial.print("D="); altSerial.print(sensor[0].temp);
     altSerial.print(" U="); altSerial.print(sensor[1].temp);
@@ -201,13 +207,15 @@ void get_Time() {
     altSerial.print(":");
     altSerial.print(minute());
     altSerial.print(":");
-    altSerial.println(second());
+    altSerial.print(second());
+    altSerial.println();
 }
 
 void set_Time() {
   byte l;
   char data[2];
   int m_year,m_month,m_day,m_hour,m_min,m_sec;
+
   l = altSerial.readBytes(data,2);
   if (99 == (m_year=to_d(l,data))) return;
   l = altSerial.readBytes(data,2);
@@ -221,20 +229,22 @@ void set_Time() {
   l = altSerial.readBytes(data,2);
   if (99 == (m_sec=to_d(l,data))) return;
   setTime(m_hour,m_min,m_sec,m_day,m_month,m_year);
+
   get_Time();
 }
 
 byte to_d (byte l, char *b) {
   byte val = 0;
-  if (l<2) return 99;
-  if (isDigit(b[0])) val = (b[0] - 0x30) * 10;
-  if (isDigit(b[1])) val += b[1] - 0x30;
+  if (l<1) return 99;
+  if (isDigit(b[0])) val = b[0] - 0x30;
+  if (l>1 and isDigit(b[1])) val = val * 10 + (b[1] - 0x30);
   return val;
 }
 
 void print_data() {
   byte i;
   byte cd = 1;
+  if (! debug_show) return;
   for ( i = 0; i < 4; i++) {
     cd &= digitalRead(CD_pin);
     delay(100);
@@ -242,11 +252,8 @@ void print_data() {
       
   if (!cd and !debug) return;
   
-  get_temp();
+  getTemp();
   if (debug) {
-/*    Serial.print(minute());
-    Serial.print(":");
-    Serial.print(second());*/
     Serial.print(" DN=");  Serial.print(sensor[0].temp);
     Serial.print(" UP=");  Serial.print(sensor[1].temp);
     Serial.print(" State="); Serial.print(state);
@@ -269,31 +276,10 @@ void print_data() {
     altSerial.print(" H="); altSerial.print(VH_param[2].count);
     altSerial.println();
   }
-/*
-  Serial.print(hour());
-  Serial.print(" ");
-  Serial.print(minute());
-  Serial.print(" ");
-  Serial.print(second());
-  Serial.print(" ");
-  Serial.print(year());
-  Serial.print(" ");
-  Serial.print(month());
-  Serial.print(" ");
-  Serial.print(day());
-  Serial.print(" ");
-  Serial.print(now());
-  Serial.println();
-*/
 
 }
 
-void set_time() {
-  const unsigned long DEFAULT_TIME = 1357041600; // Jan 1 2013
-  setTime(DEFAULT_TIME);
-}
-
-void get_temp(void) {
+void getTemp(void) {
   byte i,sen;
   byte present = 0;
   byte pe;
