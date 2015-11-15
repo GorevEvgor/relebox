@@ -10,7 +10,7 @@
 
 #define revent 6
 #define goal 2.0
-#define delta 3.0
+#define delta 0.5
 
 typedef struct VH_t
   {
@@ -19,6 +19,7 @@ typedef struct VH_t
     byte heat;
     int wait;
     int count;
+    time_t last;
   };
 
 typedef struct sens_t
@@ -37,19 +38,20 @@ VH_t VH_param[4] =
     HIGH,      // vent
     LOW,      // heat
     60 * 2,  // wait
-    0        //count
+    0,        //count
+    0          // last
   },
   {  //1 wait
 //    "wait", 
-    LOW, LOW, 60 * 10, 0
+    LOW, LOW, 60 * 10, 0, 0
   },
   {  //2 heat
 //    "heat", 
-    HIGH, HIGH, 60 * 4, 0
+    HIGH, HIGH, 60 * 4, 0, 0
   },
   {  //3 post vent
 //    "vent2", 
-    HIGH, LOW, 60 * 8, 0
+    HIGH, LOW, 60 * 8, 0, 0
   },
 };
 
@@ -123,7 +125,9 @@ void loop(void) {
      case 1: //wait
       if (now() > start + VH_param[state].wait) {
         get_temp();
-        setState((( sensor[0].temp < goal + delta ) or ( wait_count++ > revent ))? 0:1 ); 
+        setState((( sensor[0].temp < goal + delta ) or 
+                  ( wait_count++ > revent ) or 
+                  ( now() < VH_param[2].last + 3600 ))? 0:1 ); 
       }
       break;
      case 2: //heat
@@ -133,10 +137,99 @@ void loop(void) {
       if (now() > start + VH_param[state].wait) setState(1);
       break;
   }
-  
+
   print_data();
+  dialog();  
+  altSerial.flush();
     
   delay(10000);
+}
+
+void dialog() {
+  char c[2];
+  byte l;
+  
+  if (! altSerial.available() ) return;
+  altSerial.setTimeout(100);
+  
+  l = altSerial.readBytes(c,2);
+  if (l < 2) return;
+  if (c[0]=='t') {
+    if (c[1]=='g') get_Time();
+    else 
+      if (c[1]=='s') set_Time(); 
+  };
+  if (c[0]=='s') {
+    if (c[1]=='g') get_State();
+    else 
+      if (c[1]=='s') set_State(); 
+  };
+};
+
+void set_State() {
+  byte l;
+  if (! altSerial.available() ) return;
+  l = altSerial.read();
+  if ( isDigit(l) ) l -= 0x30; else return;
+  if ( l>0 and l<4 ) setState(l);
+  get_State();
+}
+
+void get_State() {
+    get_temp();
+    get_Time();
+    altSerial.print("D="); altSerial.print(sensor[0].temp);
+    altSerial.print(" U="); altSerial.print(sensor[1].temp);
+    altSerial.print(" St="); altSerial.print(state);
+    altSerial.print(" W="); altSerial.print(wait_count);
+    altSerial.print(" T="); altSerial.print(now() - start);
+    altSerial.print("/"); altSerial.print(VH_param[state].wait);
+    altSerial.print(" E="); altSerial.print(error);
+    altSerial.print(" V="); altSerial.print(VH_param[0].count);
+    altSerial.print(" H="); altSerial.print(VH_param[2].count);
+    altSerial.println();
+}
+
+void get_Time() {
+    altSerial.print(year());
+    altSerial.print("-");
+    altSerial.print(month());
+    altSerial.print("-");
+    altSerial.print(day());
+    altSerial.print(" ");
+    altSerial.print(hour());
+    altSerial.print(":");
+    altSerial.print(minute());
+    altSerial.print(":");
+    altSerial.println(second());
+}
+
+void set_Time() {
+  byte l;
+  char data[2];
+  int m_year,m_month,m_day,m_hour,m_min,m_sec;
+  l = altSerial.readBytes(data,2);
+  if (99 == (m_year=to_d(l,data))) return;
+  l = altSerial.readBytes(data,2);
+  if (99 == (m_month=to_d(l,data))) return;
+  l = altSerial.readBytes(data,2);
+  if (99 == (m_day=to_d(l,data))) return;
+  l = altSerial.readBytes(data,2);
+  if (99 == (m_hour=to_d(l,data))) return;
+  l = altSerial.readBytes(data,2);
+  if (99 == (m_min=to_d(l,data))) return;
+  l = altSerial.readBytes(data,2);
+  if (99 == (m_sec=to_d(l,data))) return;
+  setTime(m_hour,m_min,m_sec,m_day,m_month,m_year);
+  get_Time();
+}
+
+byte to_d (byte l, char *b) {
+  byte val = 0;
+  if (l<2) return 99;
+  if (isDigit(b[0])) val = (b[0] - 0x30) * 10;
+  if (isDigit(b[1])) val += b[1] - 0x30;
+  return val;
 }
 
 void print_data() {
@@ -165,10 +258,6 @@ void print_data() {
     Serial.println();
   }
   if (cd) {
-/*    altSerial.print(minute());
-    altSerial.print(":");
-    altSerial.print(second());
-    altSerial.print(" ");*/
     altSerial.print("D="); altSerial.print(sensor[0].temp);
     altSerial.print(" U="); altSerial.print(sensor[1].temp);
     altSerial.print(" St="); altSerial.print(state);
@@ -176,6 +265,7 @@ void print_data() {
     altSerial.print(" T="); altSerial.print(now() - start);
     altSerial.print("/"); altSerial.print(VH_param[state].wait);
     altSerial.print(" E="); altSerial.print(error);
+    altSerial.print(" V="); altSerial.print(VH_param[0].count);
     altSerial.print(" H="); altSerial.print(VH_param[2].count);
     altSerial.println();
   }
