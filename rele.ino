@@ -12,6 +12,16 @@
 #define goal 2.0
 #define delta 0.5
 
+#define LOG_BUF 100
+#define LOG_TIME 30*60
+
+typedef struct log_t
+  {
+    time_t time;
+    byte type;
+    byte data[8];
+  };
+
 typedef struct VH_t
   {
 //    char *name;
@@ -28,22 +38,19 @@ typedef struct sens_t
     float temp;
   };
 
-OneWire  ds(SENS_pin);  // 4.7K resistor is necessary
-AltSoftSerial altSerial; // pin 8 9
-
 VH_t VH_param[4] =
 {
-  {  //0 start vent
+  {  //0 wait
+//    "wait", 
+    LOW, LOW, 60 * 10, 0, 0
+  },
+  {  //1 start vent
 //    "vent1",   // name
     HIGH,      // vent
     LOW,      // heat
     60 * 2,  // wait
     0,        //count
     0          // last
-  },
-  {  //1 wait
-//    "wait", 
-    LOW, LOW, 60 * 10, 0, 0
   },
   {  //2 heat
 //    "heat", 
@@ -75,9 +82,19 @@ byte wait_count;
 byte error = 0;
 byte debug = 0;
 byte debug_show = 1;
+
+log_t logRecord[LOG_BUF];
+int  logIndex = 0;
+int logStart = 0;
+time_t  logLast = 0;
+
+OneWire  ds(SENS_pin);  // 4.7K resistor is necessary
+AltSoftSerial altSerial; // pin 8 9
+
+
 void setup(void) {
 
-  int monitor_time = 60;
+  int monitor_time = 30;
 
   Serial.begin(9600);
   altSerial.begin(9600);
@@ -88,7 +105,7 @@ void setup(void) {
   pinMode(CD_pin, INPUT);
 
   getTemp();
-  setState(0);
+  setState(1);
   
   while (now() < start + monitor_time and !Serial.available() ) 
     delay(500);
@@ -109,45 +126,57 @@ void setState(byte newState) {
   VH_param[newState].count++;
 }
 
-
 void loop(void) {
+  byte i;  
+  
   digitalWrite(LED_pin,(error)? HIGH: LOW);
+
   switch (state) {
-    case 0: //vent start
-      wait_count = 0;
-      if (now() > start + VH_param[state].wait) {
-        getTemp();
-        setState((sensor[0].temp > goal or (error & 0x3 == 0x3) )? 1: 2);
-      }
-      break;
-     case 1: //wait
+     case 0: //wait
       if (now() > start + VH_param[state].wait) {
         getTemp();
         setState((( sensor[0].temp < goal + delta ) or 
                   ( wait_count++ > revent ) or 
-                  ( now() < VH_param[2].last + 3600 ))? 0:1 ); 
+                  ( now() < VH_param[2].last + 3600 ))? 1:0 ); 
+      }
+      break;
+    case 1: //vent start
+      wait_count = 0;
+      if (now() > start + VH_param[state].wait) {
+        getTemp();
+        setState((sensor[0].temp > goal or ((error & 0x3) == 0x3) )? 0: 2);
       }
       break;
      case 2: //heat
       if (now() > start + VH_param[state].wait) setState(3);
       break;
      case 3: //after heat
-      if (now() > start + VH_param[state].wait) setState(1);
+      if (now() > start + VH_param[state].wait) setState(0);
       break;
   }
 
+  for (i=0 ; i < 10; i++) {
+    delay(1000);
+    if (altSerial.available() ) {
+      dialog();
+      altSerial.flush();
+    };
+  };
+
+  if (now() > logLast + LOG_TIME) {
+    getTemp();
+    logAddT1();
+    logLast=now();
+  }
+  
   print_data();
-  dialog();  
-  altSerial.flush();
-    
-  delay(10000);
+
 }
 
 void dialog() {
   char c[2];
   byte l;
   
-  if (! altSerial.available() ) return;
   altSerial.setTimeout(100);
   
   l = altSerial.readBytes(c,2);
@@ -166,6 +195,11 @@ void dialog() {
     if (c[1]=='s') debug_show = 1;
     else 
       if (c[1]=='n') debug_show = 0; 
+  };
+  if (c[0]=='l') {
+    if (c[1]=='s') log_Show();
+    else 
+      if (c[1]=='c') log_Clear(); 
   };
 };
 
@@ -197,17 +231,20 @@ void get_State() {
 }
 
 void get_Time() {
-    altSerial.print(year());
+    time_t ctime;
+
+    ctime=now();
+    altSerial.print(year(ctime));
     altSerial.print("-");
-    altSerial.print(month());
+    altSerial.print(month(ctime));
     altSerial.print("-");
-    altSerial.print(day());
+    altSerial.print(day(ctime));
     altSerial.print(" ");
-    altSerial.print(hour());
+    altSerial.print(hour(ctime));
     altSerial.print(":");
-    altSerial.print(minute());
+    altSerial.print(minute(ctime));
     altSerial.print(":");
-    altSerial.print(second());
+    altSerial.print(second(ctime));
     altSerial.println();
 }
 
@@ -231,6 +268,11 @@ void set_Time() {
   setTime(m_hour,m_min,m_sec,m_day,m_month,m_year);
 
   get_Time();
+
+    getTemp();
+    logAddT1();
+    logLast=now();
+
 }
 
 byte to_d (byte l, char *b) {
@@ -254,14 +296,10 @@ void print_data() {
   
   getTemp();
   if (debug) {
-    Serial.print(" DN=");  Serial.print(sensor[0].temp);
-    Serial.print(" UP=");  Serial.print(sensor[1].temp);
-    Serial.print(" State="); Serial.print(state);
-    Serial.print(" count="); Serial.print(wait_count);
-    Serial.print(" Time=");  Serial.print(now() - start);
-    Serial.print(" is ");  Serial.print(VH_param[state].wait);
-    Serial.print(" Error=");  Serial.print(error);
-    Serial.print(" CD=");  Serial.print(cd);
+    Serial.print(" logStart=");  Serial.print(logStart);
+    Serial.print(" logIndex=");  Serial.print(logIndex);
+    Serial.print(" now="); Serial.print(now());
+    Serial.print(" logLast=");Serial.print(logLast);
     Serial.println();
   }
   if (cd) {
@@ -319,3 +357,73 @@ void getTemp(void) {
   if ( (error & 0x3) == 0x1 ) sensor[0].temp=sensor[1].temp; // if sensor[0] not work use sensor[1]
 }
 
+void logAddRec (struct log_t *rec) {
+  logRecord[logIndex] = *rec;
+  logIndex++;
+  if (logIndex >= LOG_BUF) logIndex=0;
+  if (logIndex == logStart) {
+    logStart++;
+    if (logStart >= LOG_BUF) logStart=0;
+  };
+};
+
+void logAddT1(void) {
+  log_t r;
+  
+  r.time = now();
+  r.type = 1;
+  r.data[0] = byte(sensor[0].temp*10);
+  r.data[1] = byte(sensor[1].temp*10);
+  r.data[2] = state;
+  r.data[3] = error;
+  r.data[4] = VH_param[0].count;
+  r.data[5] = VH_param[1].count;
+  r.data[6] = VH_param[2].count;
+  r.data[7] = VH_param[3].count;
+
+  logAddRec(&r);
+};
+
+void log_Show() {
+  int i;
+  i = logStart;
+  if (i > logIndex) {
+    while (i < LOG_BUF) {
+      if (logRecord[i].type == 1) log_ShowT1(&logRecord[i]);
+      i++;
+    }
+    if (i == LOG_BUF) i = 0;
+  }
+  while (i < logIndex) {
+    if (logRecord[i].type == 1) log_ShowT1(&logRecord[i]);
+    i++;
+  }
+}
+
+void log_ShowT1(struct log_t *rec) {
+    altSerial.print(year(rec->time));
+    altSerial.print("-");
+    altSerial.print(month(rec->time));
+    altSerial.print("-");
+    altSerial.print(day(rec->time));
+    altSerial.print(" ");
+    altSerial.print(hour(rec->time));
+    altSerial.print(":");
+    altSerial.print(minute(rec->time));
+    altSerial.print(":");
+    altSerial.print(second(rec->time));
+    altSerial.print(" t");
+    altSerial.print(rec->type);
+    altSerial.print(" D"); altSerial.print(rec->data[0]/10.0);
+    altSerial.print(" U"); altSerial.print(rec->data[1]/10.0);
+    altSerial.print(" S"); altSerial.print(rec->data[2]);
+    altSerial.print(" E"); altSerial.print(rec->data[3]);
+    altSerial.print(" W"); altSerial.print(rec->data[4]);
+    altSerial.print(" V"); altSerial.print(rec->data[5]);
+    altSerial.print(" H"); altSerial.print(rec->data[6]);
+    altSerial.println();
+}
+
+void log_Clear() {
+  logStart=logIndex;
+}
